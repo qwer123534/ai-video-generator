@@ -62,3 +62,97 @@
     const historyList = document.getElementById('historyList');
 
     let history = JSON.parse(localStorage.getItem('videoHistory')) || [];
+
+    function renderHistory() {
+        historyList.innerHTML = history.length === 0 ? '<div style="color:#888">暂无记录</div>' : '';
+        history.forEach(item => {
+            const div = document.createElement('div');
+            div.className = 'history-item';
+            div.innerHTML = `<div>${item.prompt}</div><small style="color:#666">${item.model} · ${item.time}</small>`;
+            div.onclick = () => { video.src = item.url; videoContainer.style.display = 'block'; };
+            historyList.appendChild(div);
+        });
+    }
+    renderHistory();
+
+    generateBtn.onclick = async () => {
+        const text = prompt.value.trim();
+        if (!text) return alert('请输入视频描述！');
+        
+        generateBtn.disabled = true;
+        status.className = 'loading';
+        status.innerHTML = '<span class="spinner"></span> 正在提交任务...';
+        videoContainer.style.display = 'none';
+
+        try {
+            const res = await fetch('/api/generate', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ prompt: text, model: model.value })
+            });
+            const data = await res.json();
+
+            if (!data.success) {
+                status.className = 'error';
+                status.文本内容 = '❌ ' + data.error;
+                generateBtn.disabled = false;
+                return;
+            }
+
+            const taskId = data.taskId;
+            status.innerHTML = '<span class="spinner"></span> AI正在生成视频，请稍候...';
+            
+            let pollCount = 0;
+            const maxPolls = 60;
+            
+            const pollInterval = setInterval(async () => {
+                pollCount++;
+                
+                try {
+                    const taskRes = await fetch(`/api/task/${taskId}`);
+                    const taskData = await taskRes.json();
+                    
+                    if (taskData.success && taskData.data.status === "SUCCESS") {
+                        clearInterval(pollInterval);
+                        video.src = taskData.data.video_url;
+                        videoContainer.style.display = 'block';
+                        status.className = 'success';
+                        status.textContent = '✅ 视频生成成功！';
+                        
+                        历史.插入({
+                            提示: 文本,
+                            模型: 模型.值 === 'doubao' ? '豆包' : '即梦',
+                            url: taskData.data.video_url,
+                            time: new Date().toLocaleString()
+                        });
+                        如果 (历史.长度 > 20) 历史.弹出();
+                        localStorage.setItem('videoHistory', JSON.stringify(history));
+                        renderHistory();
+                        generateBtn.disabled = false;
+                    } else if (!taskData.success) {
+                        clearInterval(pollInterval);
+                        status.className = 'error';
+                        状态.文本内容 = '❌ ' + (taskData.错误 || '视频生成失败');
+                        generateBtn.disabled = false;
+                    } else if (pollCount >= maxPolls) {
+                        clearInterval(pollInterval);
+                        status.className = 'error';
+                        status.textContent = '❌ 生成超时，请稍后刷新页面查看';
+                        generateBtn.disabled = false;
+                    }
+                } 捕获 (错误) {
+                    clearInterval(pollInterval);
+                    status.className = 'error';
+                    status.textContent = '❌ 查询任务状态失败';
+                    generateBtn.disabled = false;
+                }
+            }, 3000);
+        } 捕获 (错误) {
+            status.className = 'error';
+            status.textContent = '❌ 服务连接失败';
+            generateBtn.disabled = false;
+        }
+    };
+</script>
+</body>
+</html>
