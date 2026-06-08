@@ -1,0 +1,64 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>AI视频生成器</title>
+    <style>
+        *{margin:0;padding:0;box-sizing:border-box;font-family:system-ui,-apple-system,sans-serif}
+        body{max-width:900px;margin:30px auto;padding:20px;background:#f7f8fa}
+        .card{background:white;padding:30px;border-radius:16px;box-shadow:0 4px 20px rgba(0,0,0,.06)}
+        h1{text-align:center;margin-bottom:24px;color:#1d2129}
+        textarea{width:100%;height:130px;padding:14px;font-size:16px;border:1px solid #dcdee3;border-radius:10px;resize:none;margin-bottom:16px;outline-color:#4285f4}
+        .row{display:flex;gap:12px;margin-bottom:16px;flex-wrap:wrap}
+        select,button{padding:12px 16px;border-radius:8px;font-size:15px;border:1px solid #dcdee3}
+        button{background:#4285f4;color:white;border:none;cursor:pointer;flex:1;font-weight:500;transition:all .2s}
+        button:hover:not(:disabled){background:#3367d6;transform:translateY(-1px)}
+        button:disabled{background:#ccc;cursor:not-allowed;transform:none}
+        #status{padding:12px;border-radius:8px;font-weight:500;margin:10px 0;min-height:44px;display:flex;align-items:center}
+        .loading{background:#fff9e6;color:#fa8c16;border:1px solid #ffe4b3}
+        .success{background:#e6fff0;color:#009955;border:1px solid #b3e6c8}
+        .error{background:#ffe6e6;color:#cc0000;border:1px solid #ffb3b3}
+        #videoContainer{margin-top:20px;display:none;animation:fadeIn .3s ease}
+        @keyframes fadeIn{from{opacity:0;transform:translateY(10px)}to{opacity:1;transform:translateY(0)}}
+        video{width:100%;border-radius:12px;box-shadow:0 2px 12px rgba(0,0,0,.1)}
+        .history{margin-top:30px;padding-top:20px;border-top:1px solid #eee}
+        .history-item{padding:12px;background:#f7f8fa;border-radius:8px;margin-bottom:8px;cursor:pointer;transition:all .2s}
+        .history-item:hover{background:#e8f3ff;transform:translateX(4px)}
+        .spinner{display:inline-block;width:16px;height:16px;border:2px solid #fa8c16;border-top-color:transparent;border-radius:50%;animation:spin 1s linear infinite;margin-right:8px;vertical-align:middle}
+        @keyframes spin{to{transform:rotate(360deg)}}
+        @media(max-width:600px){body{margin:10px;padding:10px}.card{padding:20px}}
+    </style>
+</head>
+<body>
+    <h1>🎬 AI视频生成器</h1>
+    <div class="card">
+        <textarea id="prompt" placeholder="输入描述：日落海边，治愈4K视频"></textarea>
+        <div class="row">
+            <select id="model">
+                <option value="doubao">豆包 - 短时视频</option>
+                <option value="jimeng">即梦 - 长视频</option>
+            </select>
+            <button id="generate">🚀 生成AI视频</button>
+        </div>
+        <div id="status"></div>
+        <div id="videoContainer">
+            <h3>生成完成</h3>
+            <video id="video" controls></video>
+        </div>
+        <div class="history">
+            <h3>📜 生成历史</h3>
+            <div id="historyList"></div>
+        </div>
+    </div>
+
+<script>
+    const prompt = document.getElementById('prompt');
+    const model = document.getElementById('model');
+    const generateBtn = document.getElementById('generate');
+    const status = document.getElementById('status');
+    const videoContainer = document.getElementById('videoContainer');
+    const video = document.getElementById('video');
+    const historyList = document.getElementById('historyList');
+
+    let history = JSON.parse(localStorage.getItem('videoHistory')) || [];
